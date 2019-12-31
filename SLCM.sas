@@ -1,4 +1,4 @@
-***Data organization;
+*** Import and organize data;
 proc import datafile="C:\Users\mcraft\Desktop\chaiken_blozis2004.xlsx" out=chaiken dbms = xlsx replace; run;
 data quant;
 	set chaiken;
@@ -18,7 +18,9 @@ data quant_long;
   by subid;
   if first.subid then count = 1;
 run;
-***Plots;
+
+*** Exploratory plots;
+* Preparatory code;
 ods output solutionf=sf(keep=effect estimate  
                                  rename=(estimate=FE));
 ods output solutionr=sr(keep=effect M2ID estimate
@@ -39,7 +41,7 @@ data subpred2;
 	or subid = 113 or subid = 199 or subid = 124  or subid = 118 or subid = 91 or subid = 5 or subid = 228 or subid = 116;
 run;
 ods pdf file = 'BrownBagPlots.pdf';
-*4x2 scatterplots with fitted trajectories;
+* 4x2 scatterplots with fitted trajectories;
 proc sgpanel data=subpred;
 	panelby subid / columns=4 spacing=5;
 	styleattrs datacolors=(GRAY4F);
@@ -51,7 +53,7 @@ proc sgpanel data=subpred;
 	*reg x=count y=quant/ cli clm;
 	title "Fitted Intercepts for a Random Subsample of Eight Individuals";
 run;
-*Overlayed trajectories;
+* Overlaid trajectories;
 proc sgplot data = subpred2 noautolegend; 
 	styleattrs datalinepatterns = (solid shortdash mediumdash longdash 
 	mediumdashshortdash dashdashdot dash dot)
@@ -64,26 +66,27 @@ proc sgplot data = subpred2 noautolegend;
 	yaxis label = "Response Time (Milliseconds)";
 	title "Overlayed Trajectories for a Random Subsample of 16 Individuals";
 run;
-*Distribution of response time;
+* Distribution of response time;
 proc sgplot data=quant_long;
   title "Distribution of Response Time";
   histogram quant;
   xaxis label = "Response Time (Milliseconds)";
 run;
 ods pdf close;
-***Models;
-*starting values;
+
+*** Models;
+* Obtain starting values;
 proc glmmix;
 	model quant = count / dist = gamma s;
 run;
-*center trials variable;
+* Center trials variable;
 data quant_long;
 	set quant_long;
 	cencount = count-1;
 run;
-*b0 is the initial value at t = 0;
-*b2 is the asymptote as t goes to infinite;
-*b1 is the rate of change;
+* b0 is the initial value at t = 0;
+* b2 is the asymptote as t goes to infinite;
+* b1 is the rate of change;
 proc nlmixed data = quant_long;
 	parms b0=0.95 b1=-0.39 b2=2.13 scale=13.32 varu=0.01;
 	linp = b2+(b0-b2)*exp(b1*cencount)+u1;
@@ -93,7 +96,7 @@ proc nlmixed data = quant_long;
 	random u1 ~ normal (0, varu) subject = subid;
 	predict mu out=fit;
 run;
-*Final plot of fitted trajectories;
+* Final plot of fitted trajectories;
 ods pdf file = 'expoplot.pdf';
 proc sgplot data=fit;
 	scatter x=count y=quant / group=subid;
